@@ -13,24 +13,9 @@
       "parameters": {
         "assignments": {
           "assignments": [
-            {
-              "id": "lf-asgn-001",
-              "name": "niche",
-              "value": "contractors",
-              "type": "string"
-            },
-            {
-              "id": "lf-asgn-002",
-              "name": "location",
-              "value": "Texas",
-              "type": "string"
-            },
-            {
-              "id": "lf-asgn-003",
-              "name": "target_count",
-              "value": 40,
-              "type": "number"
-            }
+            { "id": "lf-asgn-001", "name": "niche", "value": "contractors", "type": "string" },
+            { "id": "lf-asgn-002", "name": "location", "value": "Texas", "type": "string" },
+            { "id": "lf-asgn-003", "name": "target_count", "value": 40, "type": "number" }
           ]
         },
         "options": {}
@@ -108,30 +93,13 @@
     },
     {
       "parameters": {
-        "batchSize": 1,
-        "options": {}
-      },
-      "id": "lf-node-008",
-      "name": "Loop Through Leads",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [1740, 400]
-    },
-    {
-      "parameters": {
         "method": "POST",
         "url": "https://api.airtable.com/v0/appCeu2l3qEcbMTsY/Leads",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $vars.AIRTABLE_API_KEY }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
+            { "name": "Authorization", "value": "=Bearer {{ $vars.AIRTABLE_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
           ]
         },
         "sendBody": true,
@@ -143,55 +111,30 @@
       "name": "Save to Airtable",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1960, 280]
+      "position": [1740, 400]
     }
   ],
   "connections": {
     "Manual Trigger": {
-      "main": [
-        [{ "node": "Config", "type": "main", "index": 0 }]
-      ]
+      "main": [[{ "node": "Config", "type": "main", "index": 0 }]]
     },
     "Config": {
-      "main": [
-        [{ "node": "Build Search Queries", "type": "main", "index": 0 }]
-      ]
+      "main": [[{ "node": "Build Search Queries", "type": "main", "index": 0 }]]
     },
     "Build Search Queries": {
-      "main": [
-        [{ "node": "SerpAPI Search", "type": "main", "index": 0 }]
-      ]
+      "main": [[{ "node": "SerpAPI Search", "type": "main", "index": 0 }]]
     },
     "SerpAPI Search": {
-      "main": [
-        [{ "node": "Parse SERP Results", "type": "main", "index": 0 }]
-      ]
+      "main": [[{ "node": "Parse SERP Results", "type": "main", "index": 0 }]]
     },
     "Parse SERP Results": {
-      "main": [
-        [{ "node": "Aggregate All Results", "type": "main", "index": 0 }]
-      ]
+      "main": [[{ "node": "Aggregate All Results", "type": "main", "index": 0 }]]
     },
     "Aggregate All Results": {
-      "main": [
-        [{ "node": "Deduplicate Leads", "type": "main", "index": 0 }]
-      ]
+      "main": [[{ "node": "Deduplicate Leads", "type": "main", "index": 0 }]]
     },
     "Deduplicate Leads": {
-      "main": [
-        [{ "node": "Loop Through Leads", "type": "main", "index": 0 }]
-      ]
-    },
-    "Loop Through Leads": {
-      "main": [
-        [{ "node": "Save to Airtable", "type": "main", "index": 0 }],
-        []
-      ]
-    },
-    "Save to Airtable": {
-      "main": [
-        [{ "node": "Loop Through Leads", "type": "main", "index": 0 }]
-      ]
+      "main": [[{ "node": "Save to Airtable", "type": "main", "index": 0 }]]
     }
   },
   "active": false,
