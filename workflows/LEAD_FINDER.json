@@ -1,0 +1,201 @@
+{
+  "name": "LEAD_FINDER",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "lf-node-001",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [200, 400]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "lf-asgn-001",
+              "name": "niche",
+              "value": "contractors",
+              "type": "string"
+            },
+            {
+              "id": "lf-asgn-002",
+              "name": "location",
+              "value": "Texas",
+              "type": "string"
+            },
+            {
+              "id": "lf-asgn-003",
+              "name": "target_count",
+              "value": 40,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "lf-node-002",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const niche = $input.first().json.niche;\nconst location = $input.first().json.location;\nconst targetCount = $input.first().json.target_count;\n\nreturn [\n  { json: { query: `${niche} in ${location}`, niche, location, target_count: targetCount } },\n  { json: { query: `general ${niche} ${location} TX owner contact`, niche, location, target_count: targetCount } },\n  { json: { query: `licensed ${niche} company ${location} small business`, niche, location, target_count: targetCount } }\n];"
+      },
+      "id": "lf-node-003",
+      "name": "Build Search Queries",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://serpapi.com/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "engine", "value": "google" },
+            { "name": "q", "value": "={{ $json.query }}" },
+            { "name": "api_key", "value": "={{ $vars.SERP_API_KEY }}" },
+            { "name": "num", "value": "20" },
+            { "name": "gl", "value": "us" },
+            { "name": "hl", "value": "en" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "lf-node-004",
+      "name": "SerpAPI Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst niche = $('Config').first().json.niche;\nconst location = $('Config').first().json.location;\n\nconst organic = data.organic_results || [];\n\nreturn organic.map(item => {\n  const phoneMatch = (item.snippet || '').match(/(\\+?1?[-.\\s]?\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{4})/);\n  const phone = phoneMatch ? phoneMatch[0].trim() : '';\n\n  return {\n    json: {\n      business_name: item.title || '',\n      website: item.link || '',\n      source_url: item.link || '',\n      phone: phone,\n      niche: niche,\n      location: location,\n      status: 'New'\n    }\n  };\n});"
+      },
+      "id": "lf-node-005",
+      "name": "Parse SERP Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 400]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "leads",
+        "options": {}
+      },
+      "id": "lf-node-006",
+      "name": "Aggregate All Results",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [1300, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const allLeads = $input.first().json.leads || [];\n\nfunction extractDomain(url) {\n  try {\n    return new URL(url).hostname.replace(/^www\\./, '');\n  } catch (e) {\n    return url.toLowerCase().replace(/^https?:\\/\\/(www\\.)?/, '').split('/')[0];\n  }\n}\n\nconst seen = new Set();\nconst unique = [];\n\nfor (const lead of allLeads) {\n  const domain = extractDomain(lead.website || '');\n  if (!domain || domain.length < 4) continue;\n  if (!seen.has(domain)) {\n    seen.add(domain);\n    unique.push({ json: lead });\n  }\n  if (unique.length >= 40) break;\n}\n\nreturn unique;"
+      },
+      "id": "lf-node-007",
+      "name": "Deduplicate Leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1520, 400]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "lf-node-008",
+      "name": "Loop Through Leads",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1740, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.airtable.com/v0/appCeu2l3qEcbMTsY/Leads",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $vars.AIRTABLE_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ records: [{ fields: { business_name: $json.business_name, website: $json.website, niche: $json.niche, location: $json.location, phone: $json.phone, source_url: $json.source_url, status: 'New' } }] }) }}",
+        "options": {}
+      },
+      "id": "lf-node-009",
+      "name": "Save to Airtable",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1960, 280]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [{ "node": "Config", "type": "main", "index": 0 }]
+      ]
+    },
+    "Config": {
+      "main": [
+        [{ "node": "Build Search Queries", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Search Queries": {
+      "main": [
+        [{ "node": "SerpAPI Search", "type": "main", "index": 0 }]
+      ]
+    },
+    "SerpAPI Search": {
+      "main": [
+        [{ "node": "Parse SERP Results", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse SERP Results": {
+      "main": [
+        [{ "node": "Aggregate All Results", "type": "main", "index": 0 }]
+      ]
+    },
+    "Aggregate All Results": {
+      "main": [
+        [{ "node": "Deduplicate Leads", "type": "main", "index": 0 }]
+      ]
+    },
+    "Deduplicate Leads": {
+      "main": [
+        [{ "node": "Loop Through Leads", "type": "main", "index": 0 }]
+      ]
+    },
+    "Loop Through Leads": {
+      "main": [
+        [{ "node": "Save to Airtable", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Save to Airtable": {
+      "main": [
+        [{ "node": "Loop Through Leads", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
