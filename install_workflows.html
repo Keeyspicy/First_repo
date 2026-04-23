@@ -35,10 +35,6 @@
   <label>n8n Instance URL</label>
   <input id="n8nUrl" type="text" value="https://n8n-fy95t7stcp7afa3z7raq4ls4.34.10.33.175.sslip.io" />
 
-  <label>n8n API Key</label>
-  <input id="n8nKey" type="password" placeholder="n8n Settings → n8n API → Add API Key" />
-  <p class="hint">In n8n: click your avatar bottom-left → Settings → n8n API → Create Key</p>
-
   <label>Airtable API Key</label>
   <input id="airtableKey" type="password" placeholder="pat..." />
   <p class="hint">Your Airtable Personal Access Token (starts with pat...)</p>
@@ -117,12 +113,11 @@ function buildWorkflows(airtableKey) {
 
 async function installAll() {
   const url = document.getElementById('n8nUrl').value.trim().replace(/\/$/, '');
-  const n8nKey = document.getElementById('n8nKey').value.trim();
+  const n8nKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NTQwMzY4Yy1jZmQ5LTQ5NmMtYjA3Yy05MzdlZjExZWI0M2UiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiYjE0MmYyNGEtNDk2Mi00YzhmLWIxMjUtYmQ3YjI4MzFjN2MwIiwiaWF0IjoxNzc2OTY5NTI5LCJleHAiOjE3Nzk0OTQ0MDB9.shNw1CiPhr1HIOJVwzxA8ka66CYXPA_Vou_Q8FWk1w8';
   const atKey = document.getElementById('airtableKey').value.trim();
   const log = document.getElementById('log');
   const btn = document.getElementById('btn');
 
-  if (!n8nKey) { alert('Please enter your n8n API key'); return; }
   if (!atKey)  { alert('Please enter your Airtable API key'); return; }
 
   const workflows = buildWorkflows(atKey);
