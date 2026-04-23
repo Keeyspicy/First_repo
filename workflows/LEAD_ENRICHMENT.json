@@ -13,24 +13,9 @@
       "parameters": {
         "assignments": {
           "assignments": [
-            {
-              "id": "le-asgn-001",
-              "name": "niche",
-              "value": "contractors",
-              "type": "string"
-            },
-            {
-              "id": "le-asgn-002",
-              "name": "location",
-              "value": "Texas",
-              "type": "string"
-            },
-            {
-              "id": "le-asgn-003",
-              "name": "target_count",
-              "value": 40,
-              "type": "number"
-            }
+            { "id": "le-asgn-001", "name": "niche", "value": "contractors", "type": "string" },
+            { "id": "le-asgn-002", "name": "location", "value": "Texas", "type": "string" },
+            { "id": "le-asgn-003", "name": "target_count", "value": 50, "type": "number" }
           ]
         },
         "options": {}
@@ -48,23 +33,14 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $vars.AIRTABLE_API_KEY }}"
-            }
+            { "name": "Authorization", "value": "=Bearer {{ $vars.AIRTABLE_API_KEY }}" }
           ]
         },
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            {
-              "name": "filterByFormula",
-              "value": "AND({status}='New',{website}!='')"
-            },
-            {
-              "name": "maxRecords",
-              "value": "40"
-            }
+            { "name": "filterByFormula", "value": "AND({status}='New',{website}!='')" },
+            { "name": "maxRecords", "value": "50" }
           ]
         },
         "options": {}
@@ -77,7 +53,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const response = $input.first().json;\nconst records = response.records || [];\n\nif (records.length === 0) {\n  return [{ json: { message: 'No new leads to enrich', count: 0, _skip: true } }];\n}\n\nreturn records.map(record => ({\n  json: {\n    recordId: record.id,\n    business_name: record.fields.business_name || '',\n    website: record.fields.website || '',\n    niche: record.fields.niche || 'contractors',\n    location: record.fields.location || 'Texas'\n  }\n}));"
+        "jsCode": "const response = $input.first().json;\nconst records = response.records || [];\n\nif (records.length === 0) {\n  return [{ json: { message: 'No new leads to enrich', count: 0 } }];\n}\n\nreturn records.map(record => ({\n  json: {\n    recordId: record.id,\n    business_name: record.fields.business_name || '',\n    website: record.fields.website || '',\n    niche: record.fields.niche || 'contractors',\n    location: record.fields.location || 'Texas'\n  }\n}));"
       },
       "id": "le-node-004",
       "name": "Parse Airtable Records",
@@ -87,24 +63,13 @@
     },
     {
       "parameters": {
-        "batchSize": 1,
-        "options": {}
-      },
-      "id": "le-node-005",
-      "name": "Loop Through Leads",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [1080, 400]
-    },
-    {
-      "parameters": {
         "jsCode": "const url = $json.website || '';\nlet domain = '';\n\ntry {\n  domain = new URL(url).hostname.replace(/^www\\./, '');\n} catch (e) {\n  domain = url.replace(/^https?:\\/\\/(www\\.)?/, '').split('/')[0].split('?')[0];\n}\n\nreturn [{ json: { ...$json, domain } }];"
       },
       "id": "le-node-006",
       "name": "Extract Domain",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1300, 400]
+      "position": [1080, 400]
     },
     {
       "parameters": {
@@ -113,18 +78,9 @@
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            {
-              "name": "domain",
-              "value": "={{ $json.domain }}"
-            },
-            {
-              "name": "api_key",
-              "value": "={{ $vars.HUNTER_API_KEY }}"
-            },
-            {
-              "name": "limit",
-              "value": "10"
-            }
+            { "name": "domain", "value": "={{ $json.domain }}" },
+            { "name": "api_key", "value": "={{ $vars.HUNTER_API_KEY }}" },
+            { "name": "limit", "value": "10" }
           ]
         },
         "options": {}
@@ -133,7 +89,7 @@
       "name": "Hunter.io Domain Search",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1520, 400]
+      "position": [1300, 400]
     },
     {
       "parameters": {
@@ -143,26 +99,18 @@
       "name": "Parse Hunter Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1740, 400]
+      "position": [1520, 400]
     },
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
           "conditions": [
             {
               "id": "le-cond-001",
               "leftValue": "={{ $json.email_found }}",
               "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals",
-                "rightType": "any"
-              }
+              "operator": { "type": "boolean", "operation": "equals", "rightType": "any" }
             }
           ],
           "combinator": "and"
@@ -173,7 +121,7 @@
       "name": "Email Found?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1960, 400]
+      "position": [1740, 400]
     },
     {
       "parameters": {
@@ -182,14 +130,8 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $vars.AIRTABLE_API_KEY }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
+            { "name": "Authorization", "value": "=Bearer {{ $vars.AIRTABLE_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
           ]
         },
         "sendBody": true,
@@ -201,7 +143,7 @@
       "name": "Update Lead — Enriched",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2180, 280]
+      "position": [1960, 280]
     },
     {
       "parameters": {
@@ -210,14 +152,8 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $vars.AIRTABLE_API_KEY }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
+            { "name": "Authorization", "value": "=Bearer {{ $vars.AIRTABLE_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
           ]
         },
         "sendBody": true,
@@ -229,70 +165,24 @@
       "name": "Update Lead — No Email",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2180, 520]
+      "position": [1960, 520]
     }
   ],
   "connections": {
-    "Manual Trigger": {
-      "main": [
-        [{ "node": "Config", "type": "main", "index": 0 }]
-      ]
-    },
-    "Config": {
-      "main": [
-        [{ "node": "Fetch New Leads", "type": "main", "index": 0 }]
-      ]
-    },
-    "Fetch New Leads": {
-      "main": [
-        [{ "node": "Parse Airtable Records", "type": "main", "index": 0 }]
-      ]
-    },
-    "Parse Airtable Records": {
-      "main": [
-        [{ "node": "Loop Through Leads", "type": "main", "index": 0 }]
-      ]
-    },
-    "Loop Through Leads": {
-      "main": [
-        [{ "node": "Extract Domain", "type": "main", "index": 0 }],
-        []
-      ]
-    },
-    "Extract Domain": {
-      "main": [
-        [{ "node": "Hunter.io Domain Search", "type": "main", "index": 0 }]
-      ]
-    },
-    "Hunter.io Domain Search": {
-      "main": [
-        [{ "node": "Parse Hunter Response", "type": "main", "index": 0 }]
-      ]
-    },
-    "Parse Hunter Response": {
-      "main": [
-        [{ "node": "Email Found?", "type": "main", "index": 0 }]
-      ]
-    },
+    "Manual Trigger": { "main": [[{ "node": "Config", "type": "main", "index": 0 }]] },
+    "Config": { "main": [[{ "node": "Fetch New Leads", "type": "main", "index": 0 }]] },
+    "Fetch New Leads": { "main": [[{ "node": "Parse Airtable Records", "type": "main", "index": 0 }]] },
+    "Parse Airtable Records": { "main": [[{ "node": "Extract Domain", "type": "main", "index": 0 }]] },
+    "Extract Domain": { "main": [[{ "node": "Hunter.io Domain Search", "type": "main", "index": 0 }]] },
+    "Hunter.io Domain Search": { "main": [[{ "node": "Parse Hunter Response", "type": "main", "index": 0 }]] },
+    "Parse Hunter Response": { "main": [[{ "node": "Email Found?", "type": "main", "index": 0 }]] },
     "Email Found?": {
       "main": [
         [{ "node": "Update Lead — Enriched", "type": "main", "index": 0 }],
         [{ "node": "Update Lead — No Email", "type": "main", "index": 0 }]
       ]
-    },
-    "Update Lead — Enriched": {
-      "main": [
-        [{ "node": "Loop Through Leads", "type": "main", "index": 0 }]
-      ]
-    },
-    "Update Lead — No Email": {
-      "main": [
-        [{ "node": "Loop Through Leads", "type": "main", "index": 0 }]
-      ]
     }
   },
   "active": false,
-  "settings": {
-    "executionOrder": "v1"
-  }
+  "settings": { "executionOrder": "v1" }
 }

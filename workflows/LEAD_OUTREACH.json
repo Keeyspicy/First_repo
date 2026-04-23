@@ -13,30 +13,10 @@
       "parameters": {
         "assignments": {
           "assignments": [
-            {
-              "id": "lo-asgn-001",
-              "name": "niche",
-              "value": "contractors",
-              "type": "string"
-            },
-            {
-              "id": "lo-asgn-002",
-              "name": "location",
-              "value": "Texas",
-              "type": "string"
-            },
-            {
-              "id": "lo-asgn-003",
-              "name": "target_count",
-              "value": 40,
-              "type": "number"
-            },
-            {
-              "id": "lo-asgn-004",
-              "name": "daily_limit",
-              "value": 10,
-              "type": "number"
-            }
+            { "id": "lo-asgn-001", "name": "niche", "value": "contractors", "type": "string" },
+            { "id": "lo-asgn-002", "name": "location", "value": "Texas", "type": "string" },
+            { "id": "lo-asgn-003", "name": "target_count", "value": 50, "type": "number" },
+            { "id": "lo-asgn-004", "name": "daily_limit", "value": 20, "type": "number" }
           ]
         },
         "options": {}
@@ -54,23 +34,14 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $vars.AIRTABLE_API_KEY }}"
-            }
+            { "name": "Authorization", "value": "=Bearer {{ $vars.AIRTABLE_API_KEY }}" }
           ]
         },
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            {
-              "name": "filterByFormula",
-              "value": "AND({status}='Enriched',{email}!='')"
-            },
-            {
-              "name": "maxRecords",
-              "value": "10"
-            }
+            { "name": "filterByFormula", "value": "AND({status}='Enriched',{email}!='')" },
+            { "name": "maxRecords", "value": "20" }
           ]
         },
         "options": {}
@@ -83,7 +54,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const response = $input.first().json;\nconst records = response.records || [];\n\nif (records.length === 0) {\n  return [{ json: { message: 'No enriched leads ready for outreach', count: 0 } }];\n}\n\nreturn records.map(record => ({\n  json: {\n    recordId: record.id,\n    business_name: record.fields.business_name || '',\n    owner_name: record.fields.owner_name || '',\n    email: record.fields.email || '',\n    niche: record.fields.niche || 'contractors',\n    location: record.fields.location || 'Texas'\n  }\n}));"
+        "jsCode": "const response = $input.first().json;\nconst records = response.records || [];\n\nif (records.length === 0) {\n  return [{ json: { message: 'No enriched leads ready for outreach', count: 0 } }];\n}\n\nreturn records.map(record => ({\n  json: {\n    recordId: record.id,\n    business_name: record.fields.business_name || '',\n    owner_name: record.fields.owner_name || '',\n    email: record.fields.email || '',\n    website: record.fields.website || '',\n    niche: record.fields.niche || 'contractors',\n    location: record.fields.location || 'Texas'\n  }\n}));"
       },
       "id": "lo-node-004",
       "name": "Parse Leads",
@@ -93,24 +64,13 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst dailyLimit = $('Config').first().json.daily_limit || 10;\nconst limited = items.slice(0, dailyLimit);\n\nreturn limited.map(item => {\n  const ownerName = item.json.owner_name || 'there';\n  const businessName = item.json.business_name || 'your business';\n  const location = item.json.location || 'Texas';\n\n  const subject = `${businessName} — quick question`;\n  const body = `Hi ${ownerName},\\n\\nDo you need more qualified jobs for your contracting business in ${location}?\\n\\nWe help contractors get consistent, qualified leads. No long-term contracts, results-based.\\n\\nAre you open to a 10-minute call this week?\\n\\n[Your Name]\\n[Your Phone / Calendar Link]`;\n\n  return {\n    json: {\n      ...item.json,\n      subject,\n      body\n    }\n  };\n});"
+        "jsCode": "const items = $input.all();\nconst dailyLimit = $('Config').first().json.daily_limit || 20;\nconst limited = items.slice(0, dailyLimit);\n\nreturn limited.map(item => {\n  const ownerName = item.json.owner_name || 'there';\n  const businessName = item.json.business_name || 'your business';\n  const location = item.json.location || 'Texas';\n  const website = item.json.website || '';\n\n  const subject = `Quick question — ${businessName}`;\n  const body = `Hi ${ownerName},\\n\\nI came across ${businessName}${website ? ' (' + website + ')' : ''} and had a quick question.\\n\\nAre you open to getting more qualified jobs for your contracting business in ${location}?\\n\\nWe help Texas contractors get consistent, qualified leads. No long-term contracts, results-based.\\n\\nOpen to a 10-minute call this week?\\n\\n[Your Name]\\n[Your Phone / Calendar Link]`;\n\n  return {\n    json: {\n      ...item.json,\n      subject,\n      body\n    }\n  };\n});"
       },
       "id": "lo-node-005",
       "name": "Build Email Content",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [1080, 400]
-    },
-    {
-      "parameters": {
-        "batchSize": 1,
-        "options": {}
-      },
-      "id": "lo-node-006",
-      "name": "Loop Through Leads",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [1300, 400]
     },
     {
       "parameters": {
@@ -126,30 +86,23 @@
       "name": "Send Email",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
-      "position": [1520, 280],
+      "position": [1300, 400],
       "credentials": {
         "gmailOAuth2": {
           "id": "CONFIGURE_IN_N8N",
           "name": "keeyspicy"
         }
-      },
-      "notes": "Set credentials to your Gmail OAuth2 account named 'keeyspicy' or 'Kristens Endijs' in n8n credentials manager."
+      }
     },
     {
       "parameters": {
         "method": "PATCH",
-        "url": "=https://api.airtable.com/v0/appCeu2l3qEcbMTsY/Leads/{{ $('Loop Through Leads').item.json.recordId }}",
+        "url": "=https://api.airtable.com/v0/appCeu2l3qEcbMTsY/Leads/{{ $('Build Email Content').item.json.recordId }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $vars.AIRTABLE_API_KEY }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
+            { "name": "Authorization", "value": "=Bearer {{ $vars.AIRTABLE_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
           ]
         },
         "sendBody": true,
@@ -161,54 +114,17 @@
       "name": "Mark as Contacted",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1740, 280]
+      "position": [1520, 400]
     }
   ],
   "connections": {
-    "Manual Trigger": {
-      "main": [
-        [{ "node": "Config", "type": "main", "index": 0 }]
-      ]
-    },
-    "Config": {
-      "main": [
-        [{ "node": "Fetch Enriched Leads", "type": "main", "index": 0 }]
-      ]
-    },
-    "Fetch Enriched Leads": {
-      "main": [
-        [{ "node": "Parse Leads", "type": "main", "index": 0 }]
-      ]
-    },
-    "Parse Leads": {
-      "main": [
-        [{ "node": "Build Email Content", "type": "main", "index": 0 }]
-      ]
-    },
-    "Build Email Content": {
-      "main": [
-        [{ "node": "Loop Through Leads", "type": "main", "index": 0 }]
-      ]
-    },
-    "Loop Through Leads": {
-      "main": [
-        [{ "node": "Send Email", "type": "main", "index": 0 }],
-        []
-      ]
-    },
-    "Send Email": {
-      "main": [
-        [{ "node": "Mark as Contacted", "type": "main", "index": 0 }]
-      ]
-    },
-    "Mark as Contacted": {
-      "main": [
-        [{ "node": "Loop Through Leads", "type": "main", "index": 0 }]
-      ]
-    }
+    "Manual Trigger": { "main": [[{ "node": "Config", "type": "main", "index": 0 }]] },
+    "Config": { "main": [[{ "node": "Fetch Enriched Leads", "type": "main", "index": 0 }]] },
+    "Fetch Enriched Leads": { "main": [[{ "node": "Parse Leads", "type": "main", "index": 0 }]] },
+    "Parse Leads": { "main": [[{ "node": "Build Email Content", "type": "main", "index": 0 }]] },
+    "Build Email Content": { "main": [[{ "node": "Send Email", "type": "main", "index": 0 }]] },
+    "Send Email": { "main": [[{ "node": "Mark as Contacted", "type": "main", "index": 0 }]] }
   },
   "active": false,
-  "settings": {
-    "executionOrder": "v1"
-  }
+  "settings": { "executionOrder": "v1" }
 }

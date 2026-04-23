@@ -15,7 +15,7 @@
           "assignments": [
             { "id": "lf-asgn-001", "name": "niche", "value": "contractors", "type": "string" },
             { "id": "lf-asgn-002", "name": "location", "value": "Texas", "type": "string" },
-            { "id": "lf-asgn-003", "name": "target_count", "value": 40, "type": "number" }
+            { "id": "lf-asgn-003", "name": "target_count", "value": 50, "type": "number" }
           ]
         },
         "options": {}
@@ -28,7 +28,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const niche = $input.first().json.niche;\nconst location = $input.first().json.location;\nconst targetCount = $input.first().json.target_count;\n\nreturn [\n  { json: { query: `${niche} in ${location}`, niche, location, target_count: targetCount } },\n  { json: { query: `general ${niche} ${location} TX owner contact`, niche, location, target_count: targetCount } },\n  { json: { query: `licensed ${niche} company ${location} small business`, niche, location, target_count: targetCount } }\n];"
+        "jsCode": "const niche = $input.first().json.niche;\nconst location = $input.first().json.location;\nconst targetCount = $input.first().json.target_count;\n\nreturn [\n  { json: { query: `${niche} in ${location}`, niche, location, target_count: targetCount } },\n  { json: { query: `general ${niche} ${location} TX owner contact`, niche, location, target_count: targetCount } },\n  { json: { query: `licensed ${niche} company ${location} small business`, niche, location, target_count: targetCount } },\n  { json: { query: `${niche} ${location} TX site:yelp.com OR site:bbb.org`, niche, location, target_count: targetCount } }\n];"
       },
       "id": "lf-node-003",
       "name": "Build Search Queries",
@@ -83,7 +83,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const allLeads = $input.first().json.leads || [];\n\nfunction extractDomain(url) {\n  try {\n    return new URL(url).hostname.replace(/^www\\./, '');\n  } catch (e) {\n    return url.toLowerCase().replace(/^https?:\\/\\/(www\\.)?/, '').split('/')[0];\n  }\n}\n\nconst seen = new Set();\nconst unique = [];\n\nfor (const lead of allLeads) {\n  const domain = extractDomain(lead.website || '');\n  if (!domain || domain.length < 4) continue;\n  if (!seen.has(domain)) {\n    seen.add(domain);\n    unique.push({ json: lead });\n  }\n  if (unique.length >= 40) break;\n}\n\nreturn unique;"
+        "jsCode": "const allLeads = $input.first().json.leads || [];\nconst targetCount = $('Config').first().json.target_count || 50;\n\nfunction extractDomain(url) {\n  try {\n    return new URL(url).hostname.replace(/^www\\./, '');\n  } catch (e) {\n    return url.toLowerCase().replace(/^https?:\\/\\/(www\\.)?/, '').split('/')[0];\n  }\n}\n\nconst seen = new Set();\nconst unique = [];\n\nfor (const lead of allLeads) {\n  const domain = extractDomain(lead.website || '');\n  if (!domain || domain.length < 4) continue;\n  if (!seen.has(domain)) {\n    seen.add(domain);\n    unique.push({ json: lead });\n  }\n  if (unique.length >= targetCount) break;\n}\n\nreturn unique;"
       },
       "id": "lf-node-007",
       "name": "Deduplicate Leads",
@@ -115,30 +115,14 @@
     }
   ],
   "connections": {
-    "Manual Trigger": {
-      "main": [[{ "node": "Config", "type": "main", "index": 0 }]]
-    },
-    "Config": {
-      "main": [[{ "node": "Build Search Queries", "type": "main", "index": 0 }]]
-    },
-    "Build Search Queries": {
-      "main": [[{ "node": "SerpAPI Search", "type": "main", "index": 0 }]]
-    },
-    "SerpAPI Search": {
-      "main": [[{ "node": "Parse SERP Results", "type": "main", "index": 0 }]]
-    },
-    "Parse SERP Results": {
-      "main": [[{ "node": "Aggregate All Results", "type": "main", "index": 0 }]]
-    },
-    "Aggregate All Results": {
-      "main": [[{ "node": "Deduplicate Leads", "type": "main", "index": 0 }]]
-    },
-    "Deduplicate Leads": {
-      "main": [[{ "node": "Save to Airtable", "type": "main", "index": 0 }]]
-    }
+    "Manual Trigger": { "main": [[{ "node": "Config", "type": "main", "index": 0 }]] },
+    "Config": { "main": [[{ "node": "Build Search Queries", "type": "main", "index": 0 }]] },
+    "Build Search Queries": { "main": [[{ "node": "SerpAPI Search", "type": "main", "index": 0 }]] },
+    "SerpAPI Search": { "main": [[{ "node": "Parse SERP Results", "type": "main", "index": 0 }]] },
+    "Parse SERP Results": { "main": [[{ "node": "Aggregate All Results", "type": "main", "index": 0 }]] },
+    "Aggregate All Results": { "main": [[{ "node": "Deduplicate Leads", "type": "main", "index": 0 }]] },
+    "Deduplicate Leads": { "main": [[{ "node": "Save to Airtable", "type": "main", "index": 0 }]] }
   },
   "active": false,
-  "settings": {
-    "executionOrder": "v1"
-  }
+  "settings": { "executionOrder": "v1" }
 }
