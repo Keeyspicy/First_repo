@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Install Lead Finder Workflows → n8n</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f0f; color: #e0e0e0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 40px; max-width: 620px; width: 100%; }
+  h1 { font-size: 22px; font-weight: 600; margin-bottom: 6px; color: #fff; }
+  .sub { color: #888; font-size: 14px; margin-bottom: 28px; }
+  label { display: block; font-size: 13px; color: #aaa; margin-bottom: 6px; margin-top: 16px; }
+  input { width: 100%; padding: 10px 14px; background: #111; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 13px; outline: none; font-family: monospace; }
+  input:focus { border-color: #555; }
+  .hint { font-size: 12px; color: #555; margin-top: 5px; }
+  button { width: 100%; padding: 13px; background: #ff6b35; border: none; border-radius: 8px; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 24px; transition: background 0.2s; }
+  button:hover:not(:disabled) { background: #e55a26; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .log { margin-top: 24px; background: #111; border: 1px solid #222; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 13px; line-height: 1.9; display: none; max-height: 280px; overflow-y: auto; }
+  .ok  { color: #4caf50; }
+  .err { color: #f44336; }
+  .info{ color: #888; }
+  .done-box { margin-top: 20px; background: #1a2e1a; border: 1px solid #2a4a2a; border-radius: 8px; padding: 18px; display: none; }
+  .done-box h3 { color: #4caf50; margin-bottom: 10px; }
+  .done-box p { font-size: 13px; color: #aaa; line-height: 1.7; }
+  .done-box strong { color: #ccc; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Install Lead Finder Workflows</h1>
+  <p class="sub">Pushes all 3 workflows directly into your n8n — no copy-paste needed</p>
+
+  <label>n8n Instance URL</label>
+  <input id="n8nUrl" type="text" value="https://n8n-fy95t7stcp7afa3z7raq4ls4.34.10.33.175.sslip.io" />
+
+  <label>n8n API Key</label>
+  <input id="n8nKey" type="password" placeholder="n8n Settings → n8n API → Add API Key" />
+  <p class="hint">In n8n: click your avatar bottom-left → Settings → n8n API → Create Key</p>
+
+  <label>Airtable API Key</label>
+  <input id="airtableKey" type="password" placeholder="pat..." />
+  <p class="hint">Your Airtable Personal Access Token (starts with pat...)</p>
+
+  <button id="btn" onclick="installAll()">Install All 3 Workflows</button>
+
+  <div class="log" id="log"></div>
+  <div class="done-box" id="doneBox">
+    <h3>All 3 workflows installed!</h3>
+    <p>
+      Run them in order inside n8n:<br><br>
+      1. <strong>7.LEAD_FINDER</strong> — 4 Google searches → up to 50 unique contractor leads → Airtable<br>
+      2. <strong>7.LEAD_ENRICHMENT</strong> — Hunter.io finds decision-maker emails → marks Enriched<br>
+      3. <strong>7.LEAD_OUTREACH</strong> — sends 20 cold emails with website → marks Contacted<br><br>
+      Make sure your Gmail credential is named <strong>keeyspicy</strong> before running outreach.
+    </p>
+  </div>
+</div>
+
+<script>
+function buildWorkflows(airtableKey) {
+  const AT = airtableKey;
+  const SERP = '43601750aae1f00273fff498c623627e1e1e60b8833936e414b4b69dc4545401';
+  const HUNTER = '5cd0c71748f173f1826406f569204f892b08cf90';
+  const BASE = 'appCeu2l3qEcbMTsY';
+
+  return [
+    {
+      "name": "7.LEAD_FINDER",
+      "nodes": [
+        {"parameters":{},"id":"lf-node-001","name":"Manual Trigger","type":"n8n-nodes-base.manualTrigger","typeVersion":1,"position":[200,400]},
+        {"parameters":{"assignments":{"assignments":[{"id":"lf-asgn-001","name":"niche","value":"contractors","type":"string"},{"id":"lf-asgn-002","name":"location","value":"Texas","type":"string"},{"id":"lf-asgn-003","name":"target_count","value":50,"type":"number"}]},"options":{}},"id":"lf-node-002","name":"Config","type":"n8n-nodes-base.set","typeVersion":3.4,"position":[420,400]},
+        {"parameters":{"jsCode":"const niche = $input.first().json.niche;\nconst location = $input.first().json.location;\nconst targetCount = $input.first().json.target_count;\nreturn [\n  { json: { query: `${niche} in ${location}`, niche, location, target_count: targetCount } },\n  { json: { query: `general ${niche} ${location} TX owner contact`, niche, location, target_count: targetCount } },\n  { json: { query: `licensed ${niche} company ${location} small business`, niche, location, target_count: targetCount } },\n  { json: { query: `${niche} ${location} TX site:yelp.com OR site:bbb.org`, niche, location, target_count: targetCount } }\n];"},"id":"lf-node-003","name":"Build Search Queries","type":"n8n-nodes-base.code","typeVersion":2,"position":[640,400]},
+        {"parameters":{"method":"GET","url":"https://serpapi.com/search","sendQuery":true,"queryParameters":{"parameters":[{"name":"engine","value":"google"},{"name":"q","value":"={{ $json.query }}"},{"name":"api_key","value":SERP},{"name":"num","value":"20"},{"name":"gl","value":"us"},{"name":"hl","value":"en"}]},"options":{}},"id":"lf-node-004","name":"SerpAPI Search","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[860,400]},
+        {"parameters":{"jsCode":"const data = $input.first().json;\nconst niche = $('Config').first().json.niche;\nconst location = $('Config').first().json.location;\nconst organic = data.organic_results || [];\nreturn organic.map(item => {\n  const phoneMatch = (item.snippet || '').match(/(\\+?1?[-.\\s]?\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{4})/);\n  const phone = phoneMatch ? phoneMatch[0].trim() : '';\n  return { json: { business_name: item.title || '', website: item.link || '', source_url: item.link || '', phone, niche, location, status: 'New' } };\n});"},"id":"lf-node-005","name":"Parse SERP Results","type":"n8n-nodes-base.code","typeVersion":2,"position":[1080,400]},
+        {"parameters":{"aggregate":"aggregateAllItemData","destinationFieldName":"leads","options":{}},"id":"lf-node-006","name":"Aggregate All Results","type":"n8n-nodes-base.aggregate","typeVersion":1,"position":[1300,400]},
+        {"parameters":{"jsCode":"const allLeads = $input.first().json.leads || [];\nconst targetCount = $('Config').first().json.target_count || 50;\nfunction extractDomain(url) {\n  try { return new URL(url).hostname.replace(/^www\\./, ''); }\n  catch (e) { return url.toLowerCase().replace(/^https?:\\/\\/(www\\.)?/, '').split('/')[0]; }\n}\nconst seen = new Set(); const unique = [];\nfor (const lead of allLeads) {\n  const domain = extractDomain(lead.website || '');\n  if (!domain || domain.length < 4) continue;\n  if (!seen.has(domain)) { seen.add(domain); unique.push({ json: lead }); }\n  if (unique.length >= targetCount) break;\n}\nreturn unique;"},"id":"lf-node-007","name":"Deduplicate Leads","type":"n8n-nodes-base.code","typeVersion":2,"position":[1520,400]},
+        {"parameters":{"method":"POST","url":`https://api.airtable.com/v0/${BASE}/Leads`,"sendHeaders":true,"headerParameters":{"parameters":[{"name":"Authorization","value":`Bearer ${AT}`},{"name":"Content-Type","value":"application/json"}]},"sendBody":true,"specifyBody":"json","jsonBody":"={{ JSON.stringify({ records: [{ fields: { business_name: $json.business_name, website: $json.website, niche: $json.niche, location: $json.location, phone: $json.phone, source_url: $json.source_url, status: 'New' } }] }) }}","options":{}},"id":"lf-node-009","name":"Save to Airtable","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[1740,400]}
+      ],
+      "connections":{"Manual Trigger":{"main":[[{"node":"Config","type":"main","index":0}]]},"Config":{"main":[[{"node":"Build Search Queries","type":"main","index":0}]]},"Build Search Queries":{"main":[[{"node":"SerpAPI Search","type":"main","index":0}]]},"SerpAPI Search":{"main":[[{"node":"Parse SERP Results","type":"main","index":0}]]},"Parse SERP Results":{"main":[[{"node":"Aggregate All Results","type":"main","index":0}]]},"Aggregate All Results":{"main":[[{"node":"Deduplicate Leads","type":"main","index":0}]]},"Deduplicate Leads":{"main":[[{"node":"Save to Airtable","type":"main","index":0}]]}},
+      "active":false,"settings":{"executionOrder":"v1"}
+    },
+    {
+      "name": "7.LEAD_ENRICHMENT",
+      "nodes": [
+        {"parameters":{},"id":"le-node-001","name":"Manual Trigger","type":"n8n-nodes-base.manualTrigger","typeVersion":1,"position":[200,400]},
+        {"parameters":{"assignments":{"assignments":[{"id":"le-asgn-001","name":"niche","value":"contractors","type":"string"},{"id":"le-asgn-002","name":"location","value":"Texas","type":"string"},{"id":"le-asgn-003","name":"target_count","value":50,"type":"number"}]},"options":{}},"id":"le-node-002","name":"Config","type":"n8n-nodes-base.set","typeVersion":3.4,"position":[420,400]},
+        {"parameters":{"method":"GET","url":`https://api.airtable.com/v0/${BASE}/Leads`,"sendHeaders":true,"headerParameters":{"parameters":[{"name":"Authorization","value":`Bearer ${AT}`}]},"sendQuery":true,"queryParameters":{"parameters":[{"name":"filterByFormula","value":"AND({status}='New',{website}!='')"},{"name":"maxRecords","value":"50"}]},"options":{}},"id":"le-node-003","name":"Fetch New Leads","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[640,400]},
+        {"parameters":{"jsCode":"const response = $input.first().json;\nconst records = response.records || [];\nif (records.length === 0) return [{ json: { message: 'No new leads to enrich', count: 0 } }];\nreturn records.map(record => ({ json: { recordId: record.id, business_name: record.fields.business_name || '', website: record.fields.website || '', niche: record.fields.niche || 'contractors', location: record.fields.location || 'Texas' } }));"},"id":"le-node-004","name":"Parse Airtable Records","type":"n8n-nodes-base.code","typeVersion":2,"position":[860,400]},
+        {"parameters":{"jsCode":"const url = $json.website || '';\nlet domain = '';\ntry { domain = new URL(url).hostname.replace(/^www\\./, ''); }\ncatch (e) { domain = url.replace(/^https?:\\/\\/(www\\.)?/, '').split('/')[0].split('?')[0]; }\nreturn [{ json: { ...$json, domain } }];"},"id":"le-node-006","name":"Extract Domain","type":"n8n-nodes-base.code","typeVersion":2,"position":[1080,400]},
+        {"parameters":{"method":"GET","url":"https://api.hunter.io/v2/domain-search","sendQuery":true,"queryParameters":{"parameters":[{"name":"domain","value":"={{ $json.domain }}"},{"name":"api_key","value":HUNTER},{"name":"limit","value":"10"}]},"options":{}},"id":"le-node-007","name":"Hunter.io Domain Search","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[1300,400]},
+        {"parameters":{"jsCode":"const hunter = $input.first().json;\nconst emails = (hunter.data && hunter.data.emails) || [];\nconst recordId = $('Extract Domain').item.json.recordId;\nconst decisionTitles = ['owner','founder','ceo','president','director','manager','partner','principal'];\nlet best = null, bestScore = -1;\nfor (const e of emails) {\n  if (!e.value) continue;\n  const title = (e.position || '').toLowerCase();\n  const isDM = decisionTitles.some(t => title.includes(t));\n  const score = (isDM ? 200 : 0) + (e.confidence || 0);\n  if (score > bestScore) { bestScore = score; best = e; }\n}\nif (best && best.value && (best.confidence || 0) >= 50) {\n  return [{ json: { recordId, email: best.value, owner_name: `${best.first_name || ''} ${best.last_name || ''}`.trim(), email_confidence: best.confidence || 0, email_found: true } }];\n}\nreturn [{ json: { recordId, email_found: false } }];"},"id":"le-node-008","name":"Parse Hunter Response","type":"n8n-nodes-base.code","typeVersion":2,"position":[1520,400]},
+        {"parameters":{"conditions":{"options":{"caseSensitive":true,"leftValue":"","typeValidation":"strict"},"conditions":[{"id":"le-cond-001","leftValue":"={{ $json.email_found }}","rightValue":true,"operator":{"type":"boolean","operation":"equals","rightType":"any"}}],"combinator":"and"},"options":{}},"id":"le-node-009","name":"Email Found?","type":"n8n-nodes-base.if","typeVersion":2,"position":[1740,400]},
+        {"parameters":{"method":"PATCH","url":`=https://api.airtable.com/v0/${BASE}/Leads/{{ $json.recordId }}`,"sendHeaders":true,"headerParameters":{"parameters":[{"name":"Authorization","value":`Bearer ${AT}`},{"name":"Content-Type","value":"application/json"}]},"sendBody":true,"specifyBody":"json","jsonBody":"={{ JSON.stringify({ fields: { owner_name: $json.owner_name, email: $json.email, email_confidence: $json.email_confidence, status: 'Enriched' } }) }}","options":{}},"id":"le-node-010","name":"Update Lead — Enriched","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[1960,280]},
+        {"parameters":{"method":"PATCH","url":`=https://api.airtable.com/v0/${BASE}/Leads/{{ $json.recordId }}`,"sendHeaders":true,"headerParameters":{"parameters":[{"name":"Authorization","value":`Bearer ${AT}`},{"name":"Content-Type","value":"application/json"}]},"sendBody":true,"specifyBody":"json","jsonBody":"={{ JSON.stringify({ fields: { status: 'No Email' } }) }}","options":{}},"id":"le-node-011","name":"Update Lead — No Email","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[1960,520]}
+      ],
+      "connections":{"Manual Trigger":{"main":[[{"node":"Config","type":"main","index":0}]]},"Config":{"main":[[{"node":"Fetch New Leads","type":"main","index":0}]]},"Fetch New Leads":{"main":[[{"node":"Parse Airtable Records","type":"main","index":0}]]},"Parse Airtable Records":{"main":[[{"node":"Extract Domain","type":"main","index":0}]]},"Extract Domain":{"main":[[{"node":"Hunter.io Domain Search","type":"main","index":0}]]},"Hunter.io Domain Search":{"main":[[{"node":"Parse Hunter Response","type":"main","index":0}]]},"Parse Hunter Response":{"main":[[{"node":"Email Found?","type":"main","index":0}]]},"Email Found?":{"main":[[{"node":"Update Lead — Enriched","type":"main","index":0}],[{"node":"Update Lead — No Email","type":"main","index":0}]]}},
+      "active":false,"settings":{"executionOrder":"v1"}
+    },
+    {
+      "name": "7.LEAD_OUTREACH",
+      "nodes": [
+        {"parameters":{},"id":"lo-node-001","name":"Manual Trigger","type":"n8n-nodes-base.manualTrigger","typeVersion":1,"position":[200,400]},
+        {"parameters":{"assignments":{"assignments":[{"id":"lo-asgn-001","name":"niche","value":"contractors","type":"string"},{"id":"lo-asgn-002","name":"location","value":"Texas","type":"string"},{"id":"lo-asgn-003","name":"target_count","value":50,"type":"number"},{"id":"lo-asgn-004","name":"daily_limit","value":20,"type":"number"}]},"options":{}},"id":"lo-node-002","name":"Config","type":"n8n-nodes-base.set","typeVersion":3.4,"position":[420,400]},
+        {"parameters":{"method":"GET","url":`https://api.airtable.com/v0/${BASE}/Leads`,"sendHeaders":true,"headerParameters":{"parameters":[{"name":"Authorization","value":`Bearer ${AT}`}]},"sendQuery":true,"queryParameters":{"parameters":[{"name":"filterByFormula","value":"AND({status}='Enriched',{email}!='')"},{"name":"maxRecords","value":"20"}]},"options":{}},"id":"lo-node-003","name":"Fetch Enriched Leads","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[640,400]},
+        {"parameters":{"jsCode":"const response = $input.first().json;\nconst records = response.records || [];\nif (records.length === 0) return [{ json: { message: 'No enriched leads ready for outreach', count: 0 } }];\nreturn records.map(record => ({ json: { recordId: record.id, business_name: record.fields.business_name || '', owner_name: record.fields.owner_name || '', email: record.fields.email || '', website: record.fields.website || '', niche: record.fields.niche || 'contractors', location: record.fields.location || 'Texas' } }));"},"id":"lo-node-004","name":"Parse Leads","type":"n8n-nodes-base.code","typeVersion":2,"position":[860,400]},
+        {"parameters":{"jsCode":"const items = $input.all();\nconst dailyLimit = $('Config').first().json.daily_limit || 20;\nconst limited = items.slice(0, dailyLimit);\nreturn limited.map(item => {\n  const ownerName = item.json.owner_name || 'there';\n  const businessName = item.json.business_name || 'your business';\n  const location = item.json.location || 'Texas';\n  const website = item.json.website || '';\n  const subject = `Quick question — ${businessName}`;\n  const body = `Hi ${ownerName},\\n\\nI came across ${businessName}${website ? ' (' + website + ')' : ''} and had a quick question.\\n\\nAre you open to getting more qualified jobs for your contracting business in ${location}?\\n\\nWe help Texas contractors get consistent, qualified leads. No long-term contracts, results-based.\\n\\nOpen to a 10-minute call this week?\\n\\n[Your Name]\\n[Your Phone / Calendar Link]`;\n  return { json: { ...item.json, subject, body } };\n});"},"id":"lo-node-005","name":"Build Email Content","type":"n8n-nodes-base.code","typeVersion":2,"position":[1080,400]},
+        {"parameters":{"resource":"message","operation":"send","toList":"={{ $json.email }}","subject":"={{ $json.subject }}","emailType":"text","message":"={{ $json.body }}","options":{}},"id":"lo-node-007","name":"Send Email","type":"n8n-nodes-base.gmail","typeVersion":2.1,"position":[1300,400],"credentials":{"gmailOAuth2":{"id":"CONFIGURE_IN_N8N","name":"keeyspicy"}}},
+        {"parameters":{"method":"PATCH","url":`=https://api.airtable.com/v0/${BASE}/Leads/{{ $('Build Email Content').item.json.recordId }}`,"sendHeaders":true,"headerParameters":{"parameters":[{"name":"Authorization","value":`Bearer ${AT}`},{"name":"Content-Type","value":"application/json"}]},"sendBody":true,"specifyBody":"json","jsonBody":"={{ JSON.stringify({ fields: { status: 'Contacted', outreach_sent_at: new Date().toISOString() } }) }}","options":{}},"id":"lo-node-008","name":"Mark as Contacted","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[1520,400]}
+      ],
+      "connections":{"Manual Trigger":{"main":[[{"node":"Config","type":"main","index":0}]]},"Config":{"main":[[{"node":"Fetch Enriched Leads","type":"main","index":0}]]},"Fetch Enriched Leads":{"main":[[{"node":"Parse Leads","type":"main","index":0}]]},"Parse Leads":{"main":[[{"node":"Build Email Content","type":"main","index":0}]]},"Build Email Content":{"main":[[{"node":"Send Email","type":"main","index":0}]]},"Send Email":{"main":[[{"node":"Mark as Contacted","type":"main","index":0}]]}},
+      "active":false,"settings":{"executionOrder":"v1"}
+    }
+  ];
+}
+
+async function installAll() {
+  const url = document.getElementById('n8nUrl').value.trim().replace(/\/$/, '');
+  const n8nKey = document.getElementById('n8nKey').value.trim();
+  const atKey = document.getElementById('airtableKey').value.trim();
+  const log = document.getElementById('log');
+  const btn = document.getElementById('btn');
+
+  if (!n8nKey) { alert('Please enter your n8n API key'); return; }
+  if (!atKey)  { alert('Please enter your Airtable API key'); return; }
+
+  const workflows = buildWorkflows(atKey);
+
+  log.style.display = 'block';
+  log.innerHTML = '';
+  btn.disabled = true;
+  btn.textContent = 'Installing...';
+
+  let allOk = true;
+
+  for (const wf of workflows) {
+    log.innerHTML += `<span class="info">→ Installing ${wf.name}...</span>\n`;
+    log.scrollTop = log.scrollHeight;
+    try {
+      const res = await fetch(`${url}/api/v1/workflows`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-N8N-API-KEY': n8nKey },
+        body: JSON.stringify(wf)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        log.innerHTML += `<span class="ok">✓ ${wf.name} created (id: ${data.id || '?'})</span>\n`;
+      } else {
+        const msg = data.message || JSON.stringify(data);
+        log.innerHTML += `<span class="err">✗ ${wf.name} — ${res.status}: ${msg}</span>\n`;
+        allOk = false;
+      }
+    } catch (e) {
+      log.innerHTML += `<span class="err">✗ ${wf.name} — ${e.message}</span>\n`;
+      allOk = false;
+    }
+    log.scrollTop = log.scrollHeight;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Install All 3 Workflows';
+
+  if (allOk) {
+    document.getElementById('doneBox').style.display = 'block';
+  } else {
+    log.innerHTML += `\n<span class="err">Check errors above. Make sure n8n API is enabled and the key is correct.</span>\n`;
+  }
+  log.scrollTop = log.scrollHeight;
+}
+</script>
+</body>
+</html>
